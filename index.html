@@ -117,7 +117,7 @@
             flex-shrink: 0;
         }
         .header-title h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-        .header-info { display: flex; align-items: center; gap: 20px; }
+        .header-info { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
         .live-badge {
             background: #ECFDF5;
             color: var(--success);
@@ -130,6 +130,9 @@
             gap: 8px;
             border: 1px solid rgba(16, 185, 129, 0.2);
         }
+        .quick-links { display: flex; gap: 12px; align-items: center; }
+        .quick-links a { color: var(--primary); font-size: 20px; text-decoration: none; transition: var(--transition); }
+        .quick-links a:hover { transform: scale(1.15); opacity: 0.8; }
         .content-body {
             flex: 1;
             padding: 35px 45px;
@@ -198,6 +201,8 @@
             .sidebar { width: 80px; }
             header, footer, .content-body { padding-left: 20px; padding-right: 20px; }
             .chart-container { min-height: 400px; height: 60vh; }
+            .quick-links { gap: 8px; }
+            .quick-links a { font-size: 18px; }
         }
     </style>
 </head>
@@ -231,6 +236,19 @@
             <div class="header-info">
                 <div class="live-badge" id="badge-p">XAUUSD Focus</div>
                 <div style="font-weight: 800; font-size: 14px; color: var(--text-dim);" id="clock">00:00:00</div>
+
+                <!-- Quick Links baru -->
+                <div class="quick-links">
+                    <a href="https://www.forexfactory.com/calendar" target="_blank" title="Forex Factory Calendar">
+                        <i class='bx bx-calendar-event'></i>
+                    </a>
+                    <a href="https://www.tradingview.com/chart/" target="_blank" title="TradingView Full Chart">
+                        <i class='bx bx-line-chart'></i>
+                    </a>
+                    <a href="https://open.spotify.com/" target="_blank" title="Spotify (Musik Chill)">
+                        <i class='bx bxl-spotify'></i>
+                    </a>
+                </div>
             </div>
         </header>
 
@@ -300,6 +318,11 @@
                     <div class="result-panel highlight" style="margin-top: 50px;">
                         <span class="val-label" data-lang="res_lot">Recommended Lot Size</span>
                         <span class="val-large" id="l-res" style="color: var(--primary);">0.05</span>
+                        
+                        <!-- Risk in Amount baru -->
+                        <div style="margin-top: 15px; font-size: 14px; font-weight: 600; color: var(--text-dim);">
+                            Anda meresikokan <span id="risk-amount" style="color: var(--danger); font-weight: 800;">$0.00</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -343,7 +366,7 @@
 
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <script>
-        // --- Multi-Language ---
+        // Multi-Language Database
         const dictionary = {
             id: {
                 t_news: "Prediksi Logika Berita", t_lot: "Kalkulator Ukuran Lot", t_set: "Konfigurasi Terminal",
@@ -381,7 +404,7 @@
         }
 
         function loadChart() {
-            document.getElementById('chart-skel').style.display = 'block'; // show skeleton
+            document.getElementById('chart-skel').style.display = 'block';
 
             const theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
             const pair = document.getElementById('s-pair')?.value || "OANDA:XAUUSD";
@@ -404,7 +427,6 @@
                 container_id: "tradingview_pro"
             });
 
-            // hide skeleton after load (approx)
             setTimeout(() => {
                 document.getElementById('chart-skel').style.display = 'none';
             }, 1500);
@@ -452,7 +474,7 @@
             res.innerText = prediction;
         }
 
-        // Lot + debounce
+        // Lot + debounce + Risk Amount
         let lotTimer;
         function debounceRunLot() {
             clearTimeout(lotTimer);
@@ -463,14 +485,19 @@
             const risk = parseFloat(document.getElementById('l-risk').value) || 0;
             const sl = parseFloat(document.getElementById('l-sl').value) || 0;
 
-            if (bal > 0 && risk > 0 && sl > 0) {
-                // Basic forex: 1 pip ≈ $10 per lot standard
-                // Untuk XAUUSD bisa adjust nanti kalau mau
-                const lot = ((bal * (risk / 100)) / (sl * 10)).toFixed(2);
-                document.getElementById('l-res').innerText = lot;
-            } else {
-                document.getElementById('l-res').innerText = "0.00";
+            let lotText = "0.00";
+            let riskAmount = 0;
+
+            if (bal > 0 && risk > 0) {
+                riskAmount = (bal * (risk / 100)).toFixed(2);
+                if (sl > 0) {
+                    const lot = (riskAmount / (sl * 10)).toFixed(2);
+                    lotText = lot;
+                }
             }
+
+            document.getElementById('l-res').innerText = lotText;
+            document.getElementById('risk-amount').innerText = `$${riskAmount}`;
         }
 
         function toggleTheme() {
@@ -478,7 +505,7 @@
             const isDark = body.classList.toggle('dark-mode');
             localStorage.setItem('d-theme', isDark ? 'dark' : 'light');
             document.getElementById('theme-icon').className = isDark ? 'bx bx-sun' : 'bx bx-moon';
-            if (chartLoaded) loadChart(); // reload chart untuk sync theme
+            if (chartLoaded) loadChart();
         }
 
         function applyLang() {
@@ -516,13 +543,12 @@
             }
             if (savedTheme === 'dark') toggleTheme();
 
-            // Load chart langsung karena tab-chart active default
             loadChart();
             chartLoaded = true;
 
             runLot();
             applyLang();
-            runNews(); // init news panel
+            runNews();
         };
     </script>
 </body>
